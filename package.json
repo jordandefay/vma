@@ -24,7 +24,8 @@
     "framer-motion": "^11.2.12",
     "nodemailer": "^6.9.14",
     "@types/nodemailer": "^6.4.15",
-    "mysql2": "^3.10.1"
+    "mysql2": "^3.10.1",
+    "@supabase/supabase-js": "^2.49.1"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
