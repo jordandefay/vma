@@ -12,7 +12,12 @@ const courses = [
     lessons: "26 leçons en classe virtuelle",
     features: "Exercices interactifs",
     description: "Apprenez les bases de l'arabe moderne standard avec notre méthode progressive et intuitive.",
-    color: "amber",
+    colorClasses: {
+      bg: "bg-amber-600",
+      hover: "hover:bg-amber-700",
+      text: "text-amber-600",
+      textLight: "text-amber-100"
+    },
     prices: [
       { label: "Classe en particulier:", value: "63.90€/Personne (soit seulement 7,30€/h)" },
       { label: "Classe 2 personnes:", value: "57.90€/Personne (soit seulement 6,65€/h)" },
@@ -28,7 +33,12 @@ const courses = [
     lessons: "26 leçons en classe virtuelle",
     features: "Exercices + Conversations",
     description: "Approfondissez vos connaissances et développez votre fluidité dans des situations réelles.",
-    color: "blue",
+    colorClasses: {
+      bg: "bg-blue-600",
+      hover: "hover:bg-blue-700",
+      text: "text-blue-600",
+      textLight: "text-blue-100"
+    },
     prices: [
       { label: "Classe en particulier:", value: "63.90€/Personne (soit seulement 7,30€/h)" },
       { label: "Classe 2 personnes:", value: "57.90€/Personne (soit seulement 6,65€/h)" },
@@ -44,7 +54,12 @@ const courses = [
     lessons: "26 leçons en classe virtuelle",
     features: "Exercices + Littérature",
     description: "Maîtrisez l'arabe avec des cours sur la culture et la littérature arabes, basé sur la méthode Al Forqane.",
-    color: "green",
+    colorClasses: {
+      bg: "bg-green-600",
+      hover: "hover:bg-green-700",
+      text: "text-green-600",
+      textLight: "text-green-100"
+    },
     prices: [
       { label: "Classe en particulier:", value: "73.90€/Personne (soit seulement 7,39€/h)" },
       { label: "Classe 2 personnes:", value: "67.90€/Personne (soit seulement 6,79€/h)" },
@@ -71,21 +86,21 @@ export default function CoursesSection() {
               key={course.id}
               className="course-card bg-white rounded-lg overflow-hidden shadow-md transition duration-300"
             >
-              <div className={`bg-${course.color}-600 text-white py-4 px-6`}>
+              <div className={`${course.colorClasses.bg} text-white py-4 px-6`}>
                 <h3 className="text-xl font-bold">{course.title}</h3>
-                <p className={`text-${course.color}-100`}>{course.level}</p>
+                <p className={course.colorClasses.textLight}>{course.level}</p>
               </div>
               <div className="p-6">
                 <div className="flex items-center mb-4">
-                  <ClockIcon className={`h-5 w-5 text-${course.color}-600 mr-2`} />
+                  <ClockIcon className={`h-5 w-5 ${course.colorClasses.text} mr-2`} />
                   <span className="text-sm">{course.duration}</span>
                 </div>
                 <div className="flex items-center mb-4">
-                  <VideoCameraIcon className={`h-5 w-5 text-${course.color}-600 mr-2`} />
+                  <VideoCameraIcon className={`h-5 w-5 ${course.colorClasses.text} mr-2`} />
                   <span className="text-sm">{course.lessons}</span>
                 </div>
                 <div className="flex items-center mb-6">
-                  <BookOpenIcon className={`h-5 w-5 text-${course.color}-600 mr-2`} />
+                  <BookOpenIcon className={`h-5 w-5 ${course.colorClasses.text} mr-2`} />
                   <span className="text-sm">{course.features}</span>
                 </div>
                 <p className="text-gray-600 mb-6 text-sm">
@@ -101,7 +116,7 @@ export default function CoursesSection() {
                 </div>
                 <Link
                   href={`/inscription?courseId=${course.id}`}
-                  className={`block bg-${course.color}-600 hover:bg-${course.color}-700 text-white text-center py-2 rounded-md transition`}
+                  className={`block ${course.colorClasses.bg} ${course.colorClasses.hover} text-white text-center py-2 rounded-md transition`}
                 >
                   S'inscrire
                 </Link>
