@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import Image from 'next/image'
+import { loadStripe } from '@stripe/stripe-js'
 import { 
   ClockIcon, 
   VideoCameraIcon, 
@@ -11,6 +12,8 @@ import {
   InformationCircleIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const creneaux = [
   { value: "creneau1", label: "Créneau 1: 30 juin - 3 août" },
@@ -44,7 +47,6 @@ export default function SessionEtePage() {
   })
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [totalAmount, setTotalAmount] = useState(0)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -79,57 +81,44 @@ export default function SessionEtePage() {
     setTotalAmount(basePrice + pdfPrice)
   }
 
-  const simulatePayment = () => {
-    if (totalAmount <= 0) {
-      setMessage('Veuillez sélectionner toutes les options avant de procéder au paiement.')
-      return
-    }
-    setPaymentCompleted(true)
-    setMessage('Paiement simulé avec succès ! Vous pouvez maintenant soumettre votre inscription.')
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!paymentCompleted) {
-      setMessage('Veuillez d\'abord compléter le paiement.')
-      return
-    }
-    
     setIsLoading(true)
     
     try {
-      const response = await fetch('/api/session-ete', {
+      // Créer une session de paiement Stripe
+      const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
-          totalPaye: totalAmount.toFixed(2),
-          devise: 'EUR'
+          courseId: 'session-ete',
+          courseName: 'Session Été',
+          amount: totalAmount * 100, // Stripe utilise les centimes
+          currency: 'eur',
+          customerData: formData,
+          sessionData: {
+            creneau: formData.creneau,
+            niveau_enseignement: formData.niveau_enseignement,
+            type_groupe: formData.type_groupe,
+            support_pdf: formData.support_pdf
+          }
         }),
       })
       
-      const result = await response.json()
+      const { sessionId } = await response.json()
       
-      if (result.status === 'success') {
-        setMessage('Merci ! Votre inscription pour la session d\'été a bien été enregistrée. Nous vous contacterons bientôt.')
-        setFormData({
-          nom: '',
-          prenom: '',
-          date_naissance: '',
-          email: '',
-          whatsapp: '',
-          creneau: '',
-          niveau_enseignement: '',
-          type_groupe: '',
-          support_pdf: false
+      // Rediriger vers Stripe Checkout
+      const stripe = await stripePromise
+      if (stripe) {
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: sessionId
         })
-        setPaymentCompleted(false)
-        setTotalAmount(0)
-      } else {
-        setMessage('Une erreur est survenue. Veuillez réessayer.')
+        
+        if (error) {
+          setMessage('Erreur lors de la redirection vers le paiement.')
+        }
       }
     } catch (error) {
       setMessage('Erreur de connexion. Veuillez réessayer.')
@@ -384,44 +373,20 @@ export default function SessionEtePage() {
               </p>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-700 mb-4">
-                Paiement Sécurisé
-              </h3>
-              
-              {!paymentCompleted ? (
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={simulatePayment}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium transition"
-                  >
-                    Simuler le Paiement PayPal ({totalAmount.toFixed(2)} €)
-                  </button>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Vous pouvez régler par PayPal ou par Carte Bancaire via PayPal.
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center p-4 bg-green-100 text-green-700 rounded-md">
-                  <CheckCircleIcon className="h-6 w-6 mx-auto mb-2" />
-                  Paiement confirmé ! Vous pouvez maintenant finaliser votre inscription.
-                </div>
-              )}
-            </div>
-
             <div className="mt-8">
               <button
                 type="submit"
-                disabled={isLoading || !paymentCompleted}
-                className={`w-full py-3 px-4 rounded-md font-medium transition duration-150 ease-in-out ${
-                  paymentCompleted 
-                    ? 'bg-amber-600 hover:bg-amber-700 text-white' 
-                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                }`}
+                disabled={isLoading || totalAmount <= 0}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-md transition duration-150 ease-in-out disabled:opacity-50"
               >
-                {isLoading ? 'Envoi...' : paymentCompleted ? 'Finaliser l\'inscription' : 'Paiement requis'}
+                {isLoading ? 'Redirection vers le paiement...' : 'Procéder au paiement sécurisé'}
               </button>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-500">
+                Paiement sécurisé par Stripe • Cartes acceptées : Visa, Mastercard, American Express
+              </p>
             </div>
           </form>
           

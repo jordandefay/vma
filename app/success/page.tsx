@@ -11,15 +11,24 @@ function SuccessContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
   const [loading, setLoading] = useState(true)
+  const [sessionData, setSessionData] = useState<any>(null)
 
   useEffect(() => {
-    // Simulate loading time for better UX
-    const timer = setTimeout(() => {
+    if (sessionId) {
+      // Récupérer les détails de la session
+      fetch(`/api/get-session?session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+          setSessionData(data)
+          setLoading(false)
+        })
+        .catch(() => {
+          setLoading(false)
+        })
+    } else {
       setLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [])
+    }
+  }, [sessionId])
 
   if (loading) {
     return (
@@ -41,28 +50,35 @@ function SuccessContent() {
           </h1>
           
           <p className="text-gray-600 mb-6">
-            Merci pour votre achat. Votre paiement a été traité avec succès.
+            Merci pour votre inscription. Votre paiement a été traité avec succès.
           </p>
           
-          {sessionId && (
-            <div className="bg-gray-50 p-4 rounded-md mb-6">
+          {sessionData && (
+            <div className="bg-gray-50 p-4 rounded-md mb-6 text-left">
+              <h3 className="font-semibold text-gray-800 mb-2">Détails de votre inscription :</h3>
+              <p className="text-sm text-gray-600 mb-1">
+                <strong>Cours :</strong> {sessionData.courseName}
+              </p>
+              <p className="text-sm text-gray-600 mb-1">
+                <strong>Montant payé :</strong> {sessionData.amount} {sessionData.currency}
+              </p>
               <p className="text-sm text-gray-600">
-                Numéro de session : <span className="font-mono">{sessionId}</span>
+                <strong>Numéro de transaction :</strong> {sessionId}
               </p>
             </div>
           )}
           
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Un email de confirmation vous sera envoyé prochainement avec tous les détails de votre achat.
+              Un email de confirmation vous sera envoyé prochainement avec tous les détails de votre inscription.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/dashboard"
+                href="/cours"
                 className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-md font-medium transition"
               >
-                Voir mon tableau de bord
+                Voir d'autres cours
               </Link>
               <Link
                 href="/"

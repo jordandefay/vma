@@ -4,6 +4,9 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import { loadStripe } from '@stripe/stripe-js'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const coursesData = [
   {
@@ -53,7 +56,6 @@ function InscriptionForm() {
   })
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [paymentCompleted, setPaymentCompleted] = useState(false)
 
   useEffect(() => {
     if (courseId) {
@@ -69,43 +71,36 @@ function InscriptionForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!paymentCompleted) {
-      setMessage('Veuillez d\'abord compléter le paiement PayPal.')
-      return
-    }
-    
     setIsLoading(true)
     
     try {
-      const response = await fetch('/api/inscription', {
+      // Créer une session de paiement Stripe
+      const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
           courseId: selectedCourse?.id,
           courseName: selectedCourse?.name,
-          amountPaid: selectedPrice,
-          currency: 'EUR'
+          amount: parseFloat(selectedPrice) * 100, // Stripe utilise les centimes
+          currency: 'eur',
+          customerData: formData
         }),
       })
       
-      const result = await response.json()
+      const { sessionId } = await response.json()
       
-      if (result.status === 'success') {
-        setMessage('Votre inscription a été enregistrée avec succès !')
-        setFormData({
-          nom: '',
-          prenom: '',
-          date_naissance: '',
-          email: '',
-          whatsapp: ''
+      // Rediriger vers Stripe Checkout
+      const stripe = await stripePromise
+      if (stripe) {
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: sessionId
         })
-        setPaymentCompleted(false)
-      } else {
-        setMessage('Une erreur est survenue. Veuillez réessayer.')
+        
+        if (error) {
+          setMessage('Erreur lors de la redirection vers le paiement.')
+        }
       }
     } catch (error) {
       setMessage('Erreur de connexion. Veuillez réessayer.')
@@ -119,11 +114,6 @@ function InscriptionForm() {
       ...formData,
       [e.target.name]: e.target.value
     })
-  }
-
-  const simulatePayment = () => {
-    setPaymentCompleted(true)
-    setMessage('Paiement simulé avec succès ! Vous pouvez maintenant soumettre votre inscription.')
   }
 
   if (!selectedCourse) {
@@ -259,46 +249,20 @@ function InscriptionForm() {
             />
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-700 mb-4">
-              Paiement Sécurisé
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Le montant à payer est de <strong>{selectedPrice} EUR</strong>.
-            </p>
-            
-            {!paymentCompleted ? (
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={simulatePayment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium transition"
-                >
-                  Simuler le Paiement PayPal
-                </button>
-                <p className="text-xs text-gray-500 mt-2">
-                  (Simulation pour la démonstration)
-                </p>
-              </div>
-            ) : (
-              <div className="text-center p-4 bg-green-100 text-green-700 rounded-md">
-                ✅ Paiement confirmé ! Vous pouvez maintenant finaliser votre inscription.
-              </div>
-            )}
-          </div>
-
           <div className="mt-8">
             <button
               type="submit"
-              disabled={isLoading || !paymentCompleted}
-              className={`w-full py-3 px-4 rounded-md font-medium transition duration-150 ease-in-out ${
-                paymentCompleted 
-                  ? 'bg-amber-600 hover:bg-amber-700 text-white' 
-                  : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-              }`}
+              disabled={isLoading}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 px-4 rounded-md font-medium transition duration-150 ease-in-out disabled:opacity-50"
             >
-              {isLoading ? 'Envoi...' : paymentCompleted ? 'Finaliser l\'inscription' : 'Paiement requis d\'abord'}
+              {isLoading ? 'Redirection vers le paiement...' : 'Procéder au paiement sécurisé'}
             </button>
+          </div>
+          
+          <div className="mt-4 text-center">
+            <p className="text-sm text-gray-500">
+              Paiement sécurisé par Stripe • Cartes acceptées : Visa, Mastercard, American Express
+            </p>
           </div>
         </form>
 
